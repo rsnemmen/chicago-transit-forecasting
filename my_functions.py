@@ -246,7 +246,7 @@ INFERENCE
 
 # Helper function for plotting a model forecast.
 # Single variate.
-def get_forecast(seq_length, ts, model):
+def forecast(seq_length, ts, model):
     """
     PyTorch version of forecasting function
 
@@ -299,7 +299,7 @@ def get_forecast(seq_length, ts, model):
 
 
 # Multivariate, one step ahead
-def get_forecast_mulvar(seq_length, ts, model, target_cols=None, exog_cols=None):
+def forecast_mulvar(seq_length, ts, model, target_cols=None, exog_cols=None):
     """
     PyTorch version of multivariate forecasting function
 
@@ -440,3 +440,80 @@ def forecast_ahead(seq_length, data, model, return_numpy=True, device=None):
     return predictions
 
 
+
+def forecast_errors(seq_length, data, model, return_numpy=True, device=None, n_samples=100):
+    """
+    Make forecasts using a PyTorch time series model with optional MC dropout for uncertainty quantification.
+    
+    Parameters:
+    -----------
+    model : nn.Module
+        PyTorch model for time series forecasting.
+    data : pandas.DataFrame or numpy.ndarray
+        Input time series data.
+    seq_length : int
+        Length of the sequence to use for prediction.
+    return_numpy : bool, default=True
+        Whether to return predictions as a numpy array.
+    device : torch.device, default=None
+        Device to run the model on. If None, uses CUDA if available.
+    n_samples : int, default=100
+        Number of stochastic forward passes for MC dropout. If 1, standard inference is performed.
+        
+    Returns:
+    --------
+    If n_samples > 1:
+        forecast_mean : numpy.ndarray or torch.Tensor
+            Forecasted values (mean over MC dropout samples).
+        forecast_std : numpy.ndarray or torch.Tensor
+            Standard deviation of the forecasts (uncertainty estimation).
+    Else:
+        predictions : numpy.ndarray or torch.Tensor
+            Forecasted values.
+    """
+    # Determine device if not specified
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    # Convert input data to numpy if it's a DataFrame
+    if isinstance(data, pd.DataFrame):
+        data = data.to_numpy()
+    
+    # Prepare input tensor with shape [1, seq_length, features]
+    X = torch.tensor(data[np.newaxis, :seq_length], dtype=torch.float32).to(device)
+    
+    # Move model to selected device
+    model = model.to(device)
+    
+    # If we want to perform MC dropout inference (more than one sample), we need to enable dropout at inference.
+    # Warning: This sets the entire model in train() mode, so if you have layers like BatchNorm they will also be in training mode.
+    if n_samples > 1:
+        model.train()  
+    else:
+        model.eval()
+        
+    predictions_list = []
+    with torch.no_grad():
+        for _ in range(n_samples):
+            pred = model(X)  # typically shape: [1, forecast_steps]
+            predictions_list.append(pred.unsqueeze(0))
+    
+    # Concatenate predictions along the new "sample" dimension.
+    # New shape: [n_samples, 1, forecast_steps]
+    predictions_all = torch.cat(predictions_list, dim=0)
+    
+    if n_samples > 1:
+        # Compute the mean and standard deviation across the n_samples
+        forecast_mean = predictions_all.mean(dim=0)  # shape: [1, forecast_steps]
+        forecast_std = predictions_all.std(dim=0)    # shape: [1, forecast_steps]
+        
+        if return_numpy:
+            forecast_mean = forecast_mean.cpu().numpy()
+            forecast_std = forecast_std.cpu().numpy()
+        return forecast_mean, forecast_std
+    else:
+        # Standard inference with a single sample; squeeze the first dimension.
+        predictions = predictions_all.squeeze(0)
+        if return_numpy:
+            return predictions.cpu().numpy()
+        return predictions
