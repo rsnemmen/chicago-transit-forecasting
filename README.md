@@ -6,3 +6,6 @@ Under construction. Finished:
 
 - [x] 1. Basics
 - [x] 2. ML, linear model
+- [x] 3. RNNs
+- [ ] 4. LSTM
+
