@@ -217,26 +217,31 @@ def fit_and_evaluate_mulvar(model, train_loader, valid_loader, learning_rate, ep
 
 
 # Trains a model and saves weights to disk. If weight file is found, load it from disk.
-def train_save(model, in_colab, filename, train_loader, valid_loader, learning_rate, training_fn):
+def train_save(model, train_loader, valid_loader, training_fn, in_colab=False, learning_rate=0.05, epochs=500, create_file=True, filename='model.pth', rewrite=False):
+  """
+  create_file: if False, it will not even bother reading from disk, and will always train the model.
+  """
   if in_colab:
     model_file='/content/drive/MyDrive/Colab Notebooks/pytorch/models/'+filename
   else:
     model_file=Path() / "models" / filename
-
-  if not os.path.exists(model_file):
+  
+  if not create_file or rewrite:
     # train and evaluate
-    training_fn(model, train_loader, valid_loader, learning_rate=learning_rate, verbose=1)
+    training_fn(model, train_loader, valid_loader, learning_rate=learning_rate, verbose=1, epochs=epochs)
 
-    # Save weights to Google Drive
-    print("Saving weights to disk")
-    torch.save(model.state_dict(), model_file)
-  else:
-    # Then load the saved weights
-    print("Loading weights from disk")
-    model.load_state_dict(torch.load(model_file))
+  if not create_file:
+    if not os.path.exists(model_file) or rewrite:
+      # Save weights to Google Drive
+      print("Saving weights to disk")
+      torch.save(model.state_dict(), model_file)
+    else:
+      # Then load the saved weights
+      print("Loading weights from disk")
+      model.load_state_dict(torch.load(model_file))
 
-    # Set to evaluation mode if using for inference
-    model.eval()
+      # Set to evaluation mode if using for inference
+      model.eval()
 
 
 """
