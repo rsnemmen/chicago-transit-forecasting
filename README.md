@@ -13,7 +13,7 @@ This repo contains a detailed analysis of the Chicago public transportation (bus
 
 ![](images/example-models.png)
 
-For the deep learning models, you need a NVIDIA GPU. They work well using Google Collab (I developed these notebooks on Collab).
+For the deep learning models, you need a NVIDIA GPU. They work well using Google Collab (I developed these notebooks on Collab). `my_functions.py` contains several helper functions for training and inference with pytorch, to hide boilerplate code from the notebooks.
 
 ## Notebooks
 
@@ -21,7 +21,7 @@ For the deep learning models, you need a NVIDIA GPU. They work well using Google
 
 [Notebook 2](2-ML,%20linear%20model.ipynb): prepare data for pytorch, linear model.
 
-[Notebook 3](3_RNN_and_more—need_NVIDIA_GPU.ipynb): RNN, deep RNN, multivariate/multitarget, seq2vec.
+[Notebook 3](3_RNN_and_more—need_NVIDIA_GPU.ipynb): RNN, deep RNN, multivariate/multitarget, seq2vec, uncertainty band.
 
 [Notebook 4](4_LSTM—need_NVIDIA_GPU.ipynb): LSTM, GRU, CNN, wavenet.
 
