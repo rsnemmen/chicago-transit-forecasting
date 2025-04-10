@@ -9,3 +9,6 @@ Under construction. Finished:
 - [x] 3. RNNs
 - [ ] 4. LSTM
 
+## TODO
+
+- [ ] model with XGBoost
