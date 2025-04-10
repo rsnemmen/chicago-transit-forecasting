@@ -217,31 +217,92 @@ def fit_and_evaluate_mulvar(model, train_loader, valid_loader, learning_rate, ep
 
 
 # Trains a model and saves weights to disk. If weight file is found, load it from disk.
-def train_save(model, train_loader, valid_loader, training_fn, in_colab=False, learning_rate=0.05, epochs=500, create_file=True, filename='model.pth', rewrite=False):
-  """
-  create_file: if False, it will not even bother reading from disk, and will always train the model.
-  """
-  if in_colab:
-    model_file='/content/drive/MyDrive/Colab Notebooks/pytorch/models/'+filename
-  else:
-    model_file=Path() / "models" / filename
-  
-  if not create_file or rewrite:
-    # train and evaluate
-    training_fn(model, train_loader, valid_loader, learning_rate=learning_rate, verbose=1, epochs=epochs)
+def train_save(model, train_loader, valid_loader, training_fn, in_colab=False, learning_rate=0.05, epochs=500, filename='model.pth', rewrite=False, verbose=1):
+    """
+    Trains the model using training_fn if the model file doesn't exist or rewrite is True.
+    Loads weights from the file if it exists and rewrite is False.
+    Saves the model after training if rewrite is True or the file didn't exist initially.
 
-  if not create_file:
-    if not os.path.exists(model_file) or rewrite:
-      # Save weights to Google Drive
-      print("Saving weights to disk")
-      torch.save(model.state_dict(), model_file)
+    Args:
+        model: The PyTorch model.
+        train_loader: DataLoader for training data.
+        valid_loader: DataLoader for validation data.
+        training_fn: The function to call for training (e.g., fit_and_evaluate_mulvar).
+                     It should accept (model, train_loader, valid_loader, learning_rate, epochs, verbose)
+                     and return a metric (e.g., validation MAE).
+        in_colab (bool): Flag for Colab environment path handling.
+        learning_rate (float): Learning rate for the optimizer.
+        epochs (int): Maximum number of training epochs.
+        filename (str): Name of the file to save/load the model state_dict.
+        rewrite (bool): If True, always retrain and overwrite the existing file.
+                        If False, load from file if it exists, otherwise train and save.
+        verbose (int): Verbosity level for the training function.
+
+    Returns:
+        The metric returned by the training_fn if training occurred,
+        or None if weights were loaded without retraining. Potentially load and evaluate
+        on validation set if weights are loaded to return a consistent metric.
+        (Current implementation returns metric only if trained).
+    """
+    if in_colab:
+        # Adjust path for Google Drive if needed
+        drive_path = '/content/drive/MyDrive/Colab Notebooks/pytorch/models/'
+        if not os.path.exists(drive_path):
+             os.makedirs(drive_path) # Ensure directory exists
+        model_file = os.path.join(drive_path, filename)
     else:
-      # Then load the saved weights
-      print("Loading weights from disk")
-      model.load_state_dict(torch.load(model_file))
+        model_dir = Path() / "models"
+        model_dir.mkdir(parents=True, exist_ok=True) # Ensure directory exists
+        model_file = model_dir / filename
 
-      # Set to evaluation mode if using for inference
-      model.eval()
+    metric = None # Initialize metric variable
+
+    # Decide whether to train or load
+    if rewrite or not os.path.exists(model_file):
+        if rewrite and os.path.exists(model_file):
+            print(f"Retraining and overwriting existing model file: {model_file}")
+        elif not os.path.exists(model_file):
+             print(f"Model file not found. Training model: {model_file}")
+        else: # Should not happen based on logic, but good practice
+             print(f"Training model: {model_file}")
+
+
+        # Train the model
+        metric = training_fn(model, train_loader, valid_loader,
+                             learning_rate=learning_rate, epochs=epochs, verbose=verbose)
+
+        # Save the trained model state
+        print(f"Saving trained weights to disk: {model_file}")
+        try:
+            torch.save(model.state_dict(), model_file)
+        except Exception as e:
+            print(f"Error saving model: {e}")
+
+
+    else:
+        # Load existing weights
+        print(f"Loading weights from disk: {model_file}")
+        try:
+            # Ensure loading happens on the correct device (e.g., CPU if saved from GPU and no GPU now)
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            model.load_state_dict(torch.load(model_file, map_location=device))
+            model.eval() # Set model to evaluation mode after loading
+            print("Model loaded successfully.")
+            # Optional: Evaluate the loaded model to get a metric if needed
+            # metric = evaluate_loaded_model(model, valid_loader) # You'd need a separate eval function
+        except Exception as e:
+            print(f"Error loading model: {e}. Consider retraining.")
+            # Optionally trigger training here if loading fails and you want a fallback
+            # print("Retraining model due to loading error...")
+            # metric = training_fn(model, train_loader, valid_loader,
+            #                      learning_rate=learning_rate, epochs=epochs, verbose=verbose)
+            # print(f"Saving newly trained weights to disk: {model_file}")
+            # torch.save(model.state_dict(), model_file)
+
+
+    return metric # Return the metric obtained from training (or None/evaluation if loaded)
+
+
 
 
 """
