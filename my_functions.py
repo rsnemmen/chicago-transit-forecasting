@@ -526,3 +526,14 @@ def forecast_errors(seq_length, data, model, return_numpy=True, device=None, n_s
 # Computes MAE for two numpy arrays
 def maef(y_pred, data):
     return (y_pred - data).abs().mean()
+
+# Align the phase: helper function
+def align_phase(ts, dt=-1):
+  """
+  Returns a pandas time series object.
+  """
+  # shift the TS by -1 day
+  values_shift=np.roll(ts, dt)
+
+  # create a pandas TS
+  return pd.Series(values_shift, index=ts.index)
