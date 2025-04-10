@@ -517,3 +517,12 @@ def forecast_errors(seq_length, data, model, return_numpy=True, device=None, n_s
         if return_numpy:
             return predictions.cpu().numpy()
         return predictions
+
+
+
+# MISC
+# =========
+
+# Computes MAE for two numpy arrays
+def maef(y_pred, data):
+    return (y_pred - data).abs().mean()
