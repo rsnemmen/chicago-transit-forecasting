@@ -19,11 +19,11 @@ For the deep learning models, you need a NVIDIA GPU. They work well using Google
 
 [Notebook 1](1-basics,%20ARIMA.ipynb): EDA, naive, ACF, PACF, (S)AR(I)MA.
 
-[Notebook 2](2-ML,%20linear%20model.ipynb]: prepare data for pytorch, linear model.
+[Notebook 2](2-ML,%20linear%20model.ipynb): prepare data for pytorch, linear model.
 
-[Notebook 3](3_RNN_and_more—need_NVIDIA_GPU.ipynb]: RNN, deep RNN, multivariate/multitarget, seq2vec.
+[Notebook 3](3_RNN_and_more—need_NVIDIA_GPU.ipynb): RNN, deep RNN, multivariate/multitarget, seq2vec.
 
-[Notebook 4](4_LSTM—need_NVIDIA_GPU.ipynb]: LSTM, GRU, CNN, wavenet.
+[Notebook 4](4_LSTM—need_NVIDIA_GPU.ipynb): LSTM, GRU, CNN, wavenet.
 
 ## TODO
 
