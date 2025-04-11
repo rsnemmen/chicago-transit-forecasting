@@ -18,6 +18,8 @@ import torch.nn.functional as F
 import copy
 import pandas as pd
 
+
+
 # For univariate TS
 def fit_and_evaluate(model, train_loader, valid_loader, learning_rate, epochs=500, verbose=0):
     # Device configuration (GPU if available)
@@ -308,7 +310,17 @@ def train_save(model, train_loader, valid_loader, training_fn, in_colab=False, l
 """
 INFERENCE
 ============
+
+Rolling Forecast:
+
+The forecast* functions below construct a sliding window (t_in) containing the most recent 
+seq_length observations. The trained model’s is called window, and the prediction is stored.
+The timestamp for the prediction is taken from the DataFrame’s index.
+The sliding window is updated: for target columns, the forecasted value is inserted; 
+for exogenous columns, the actual future value is inserted (if available), 
+otherwise persistence is assumed.
 """
+
 
 # Helper function for plotting a model forecast.
 # Single variate.
@@ -454,6 +466,101 @@ def forecast_mulvar(seq_length, ts, model, target_cols=None, exog_cols=None):
         return pd.Series(y_preds[0], index=t, name=target_cols[0])
     else:
         return pd.DataFrame({col: vals for col, vals in zip(target_cols, y_preds)}, index=t)
+
+
+
+
+def forecast_mulvar_xgb(seq_length, ts, model, target_cols=None, exog_cols=None):
+    """
+    XGBoost version of the multivariate forecasting function for one-step-ahead forecasts.
+
+    Args:
+        seq_length (int): Length of input sequence to the model (e.g., 56 days).
+        ts (pd.DataFrame): Input DataFrame with all variables and a datetime index.
+        model: Trained XGBoost model (e.g., XGBRegressor or a multi-output wrapper) that outputs 
+               the forecast for the target variable(s).
+        target_cols: List of column names to forecast (default is the first column).
+        exog_cols: List of exogenous column names that are used as inputs, but not forecasted.
+                  If None, all columns are used as both inputs and candidates for forecasting.
+
+    Returns:
+        pd.Series or pd.DataFrame: Forecast results (Series for a single target, DataFrame for multiple).
+    """
+    # Default to first column if target_cols not specified
+    if target_cols is None:
+        target_cols = [ts.columns[0]]
+    elif isinstance(target_cols, str):
+        target_cols = [target_cols]
+        
+    # Default to using all columns if exog_cols not specified
+    if exog_cols is None:
+        feature_cols = ts.columns.tolist()
+    else:
+        feature_cols = list(set(target_cols + exog_cols))
+    
+    n_features = len(feature_cols)
+    n_targets = len(target_cols)
+    
+    # Convert DataFrame to a numpy array (using only the selected feature columns)
+    ts_np = ts[feature_cols].to_numpy()
+    
+    # Initialize storage for predictions. One list per target
+    y_preds = [[] for _ in range(n_targets)]
+    forecast_timestamps = []
+
+    # Initialize the sliding window using the first seq_length rows.
+    # The window has shape (seq_length, n_features)
+    t_in = ts_np[:seq_length].copy()
+
+    # Loop over the available time steps (simulate rolling forecast)
+    # We start at seq_length+1 so that the forecast is for t+1 relative to the current window.
+    for i, _ in enumerate(ts_np[seq_length+1:]):
+        # Flatten the current window into shape (1, seq_length * n_features)
+        t_in_flat = t_in.flatten().reshape(1, -1)
+        
+        # Get the forecast from the XGBoost model
+        y_pred = model.predict(t_in_flat)
+        
+        # Process prediction output. If only one target is being forecasted, then y_pred is
+        # a 1-D array with a single value. For multiple targets, we assume y_pred returns an array
+        # of shape (n_targets, ) or (1, n_targets).
+        if n_targets == 1:
+            y_pred_value = y_pred[0]
+            y_preds[0].append(y_pred_value)
+        else:
+            # Ensure we have a flat array of predictions
+            y_pred_values = y_pred.flatten()
+            for j in range(n_targets):
+                y_preds[j].append(y_pred_values[j])
+        
+        # Store the timestamp corresponding to the forecasted observation.
+        forecast_timestamps.append(ts.index[seq_length+1 + i])
+        
+        # Update the sliding window:
+        # 1. Shift the window one time step ahead.
+        t_in = np.roll(t_in, -1, axis=0)
+        
+        # 2. For the most recent row, put the forecasted values for target columns and actual values
+        # for exogenous columns.
+        for j, col in enumerate(feature_cols):
+            if col in target_cols:
+                # For target columns, use the forecast
+                target_idx = target_cols.index(col)
+                t_in[-1, j] = y_preds[target_idx][-1]
+            else:
+                # For exogenous variables, if available, use the actual following value
+                if i + seq_length + 1 < len(ts_np):
+                    t_in[-1, j] = ts_np[i + seq_length + 1, j]
+
+    # Return forecasted results as a pandas Series (for a single target) or DataFrame (multiple targets)
+    if n_targets == 1:
+        return pd.Series(y_preds[0], index=forecast_timestamps, name=target_cols[0])
+    else:
+        forecast_df = pd.DataFrame({col: vals for col, vals in zip(target_cols, y_preds)},
+                                   index=forecast_timestamps)
+        return forecast_df
+
+
 
 
 
