@@ -4,10 +4,8 @@ This repo contains a detailed analysis of the Chicago public transportation (bus
 
 - (S)AR(I)MA with `statsmodels`
 - Linear
-- RNN with PyTorch
-- LSTM
-- GRU
-- CNN
+- RNN, LSTM, GRU and CNN with PyTorch
+- XGBoost with `xgboost`
 
 ![](images/ts.png)
 
@@ -30,5 +28,3 @@ For the deep learning models, you need a NVIDIA GPU. They work well using Google
 
 ## TODO
 
-- [x] model with XGBoost
-- [x] include plots and basic description in README
