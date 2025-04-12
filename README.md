@@ -25,7 +25,10 @@ For the deep learning models, you need a NVIDIA GPU. They work well using Google
 
 [Notebook 4](4_LSTM—need_NVIDIA_GPU.ipynb): LSTM, GRU, CNN, wavenet.
 
+[Notebook 5](5-XGBoost.ipynb): XGBoost.
+
+
 ## TODO
 
-- [ ] model with XGBoost
+- [x] model with XGBoost
 - [x] include plots and basic description in README
