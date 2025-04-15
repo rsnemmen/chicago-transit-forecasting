@@ -1,6 +1,6 @@
 # Time series forecasting: Chicago ridership
 
-This repo contains a detailed analysis of the Chicago public transportation (bus and rail) time series from 2001 to just before the pandemic. For the exploratory analysis, it includes naive forecasting, autocorrelation and partial autocorrelation analysis. Models explored include: 
+This repo explores the Chicago public transportation (bus and rail) time series from 2001 to just before the pandemic, testing a wide variety of forecasting models. For the exploratory analysis, it includes naive forecasting, autocorrelation and partial autocorrelation analysis. Models explored include: 
 
 - (S)AR(I)MA with `statsmodels`
 - Linear
@@ -28,3 +28,5 @@ For the deep learning models, you need a NVIDIA GPU. They work well using Google
 
 ## TODO
 
+- [ ] perform model selection
+- [ ] get wavenet model working
